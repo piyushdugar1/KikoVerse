@@ -1,0 +1,43 @@
+name: GappuVerse Daily Robot
+
+on:
+  schedule:
+    - cron: '30 12 * * *'   # 12:30 London time = 6:00 PM India time every day
+  workflow_dispatch:          # adds a manual "Run now" button on GitHub
+
+jobs:
+  run-the-robot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wake up and get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install video helpers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg imagemagick
+
+      - name: Install Python libraries
+        run: pip install -r requirements.txt
+
+      - name: Run Gappu Robot
+        env:
+          GEMINI_API_KEY:    ${{ secrets.GEMINI_API_KEY }}
+          YT_CLIENT_ID:      ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET:  ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN:  ${{ secrets.YT_REFRESH_TOKEN }}
+        run: python main.py
+
+      - name: Save the topic diary
+        run: |
+          git config user.email 'robot@gappuverse.com'
+          git config user.name 'GappuBot'
+          git add used_topics.txt
+          git diff --staged --quiet || git commit -m 'Robot worked today!'
+          git push
